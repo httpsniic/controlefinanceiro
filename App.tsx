@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   AppState, Store, Transaction, ProductGroup, Supplier, User,
   DailyRevenue, TransactionType, StoreGoal
 } from './types';
-import { db } from './services/db';
+import { auth, stores as storesApi, transactions as transactionsApi, suppliers as suppliersApi, productGroups as productGroupsApi, dailyRevenues as dailyRevenuesApi, goals as goalsApi } from './services/api';
 import StoreSelector from './components/StoreSelector';
 import TransactionForm from './components/TransactionForm';
 import ProductGroupManager from './components/ProductGroupManager';
@@ -18,21 +17,79 @@ import {
   User as UserIcon, LogOut, ChevronLeft, ChevronRight, 
   LayoutDashboard, ShoppingCart, Target, Truck, 
   Package, TrendingUp, Percent, Calendar,
-  Store as StoreIcon, Settings
+  Store as StoreIcon, Settings, Loader2
 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [authForm, setAuthForm] = useState({ user: '', password: '' });
   const [authError, setAuthError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
-  const [state, setState] = useState<AppState>(db.load());
+  const [state, setState] = useState<AppState>({
+    users: [],
+    currentUser: null,
+    stores: [],
+    activeStoreId: null,
+    productGroups: {},
+    suppliers: {},
+    transactions: {},
+    dailyRevenues: {},
+    goals: {},
+    userStoreAccess: {}
+  });
+  
   const [activeView, setActiveView] = useState<string>('dashboard');
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
 
-  useEffect(() => { 
-    db.save(state); 
-  }, [state]);
+  // Carregar dados quando selecionar uma loja
+  useEffect(() => {
+    if (state.activeStoreId && state.currentUser) {
+      loadStoreData(state.activeStoreId);
+    }
+  }, [state.activeStoreId]);
+
+  // Carregar lojas quando usuário logar
+  useEffect(() => {
+    if (state.currentUser) {
+      loadStores();
+    }
+  }, [state.currentUser]);
+
+  const loadStores = async () => {
+    try {
+      const storesList = await storesApi.list();
+      setState(prev => ({ ...prev, stores: storesList }));
+    } catch (error: any) {
+      console.error('Erro ao carregar lojas:', error);
+    }
+  };
+
+  const loadStoreData = async (storeId: string) => {
+    try {
+      setIsLoading(true);
+      const [transactionsList, suppliersList, groupsList, revenuesList, goalsList] = await Promise.all([
+        transactionsApi.list(storeId),
+        suppliersApi.list(storeId),
+        productGroupsApi.list(storeId),
+        dailyRevenuesApi.list(storeId),
+        goalsApi.list(storeId)
+      ]);
+
+      setState(prev => ({
+        ...prev,
+        transactions: { ...prev.transactions, [storeId]: transactionsList },
+        suppliers: { ...prev.suppliers, [storeId]: suppliersList },
+        productGroups: { ...prev.productGroups, [storeId]: groupsList },
+        dailyRevenues: { ...prev.dailyRevenues, [storeId]: revenuesList },
+        goals: { ...prev.goals, [storeId]: goalsList }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao carregar dados da loja:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const userStores = useMemo(() => {
     if (!state.currentUser) return [];
@@ -63,19 +120,24 @@ const App: React.FC = () => {
     };
   }, [activeRevenues, activeTransactions, activeGoals, currentMonth]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = state.users.find(u => u.username === authForm.user && u.password === authForm.password);
-    if (user) { 
-      setState(p => ({ ...p, currentUser: user })); 
-      setAuthError(''); 
-    } else { 
-      setAuthError('Usuário ou senha incorretos.'); 
+    setAuthError('');
+    setIsLoading(true);
+    
+    try {
+      const user = await auth.login(authForm.user, authForm.password);
+      setState(prev => ({ ...prev, currentUser: user }));
+    } catch (error: any) {
+      setAuthError(error.message || 'Usuário ou senha incorretos.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError('');
     
     // Validação de Usuário: Apenas letras minúsculas
     if (!/^[a-z]+$/.test(authForm.user)) {
@@ -89,34 +151,264 @@ const App: React.FC = () => {
       return;
     }
 
-    // Validação de Duplicidade
-    if (state.users.some(u => u.username === authForm.user)) { 
-      setAuthError('Este nome de usuário já está em uso.'); 
-      return; 
-    }
-
-    const newUser: User = { 
-      id: `user-${Math.random().toString(36).substr(2, 9)}`, 
-      username: authForm.user, 
-      password: authForm.password, 
-      name: authForm.user, // O nome padrão será o próprio usuário
-      role: 'user' 
-    };
+    setIsLoading(true);
     
-    setState(prev => ({ 
-      ...prev, 
-      users: [...prev.users, newUser], 
-      currentUser: newUser 
-    }));
-    setIsRegistering(false);
-    setAuthForm({ user: '', password: '' });
+    try {
+      const user = await auth.register(authForm.user, authForm.password, authForm.user);
+      setState(prev => ({ ...prev, currentUser: user }));
+      setIsRegistering(false);
+      setAuthForm({ user: '', password: '' });
+    } catch (error: any) {
+      setAuthError(error.message || 'Erro ao criar usuário.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleLogout = () => setState(prev => ({ ...prev, currentUser: null, activeStoreId: null }));
+  const handleLogout = () => {
+    auth.logout();
+    setState(prev => ({ ...prev, currentUser: null, activeStoreId: null }));
+  };
+
   const changeMonth = (dir: number) => {
     const d = new Date(currentMonth + '-02');
     d.setMonth(d.getMonth() + dir);
     setCurrentMonth(d.toISOString().slice(0, 7));
+  };
+
+  // Funções de gerenciamento de lojas
+  const handleCreateStore = async (name: string) => {
+    try {
+      const newStore = await storesApi.create(name);
+      setState(prev => ({ ...prev, stores: [...prev.stores, newStore] }));
+    } catch (error: any) {
+      console.error('Erro ao criar loja:', error);
+      alert('Erro ao criar loja: ' + error.message);
+    }
+  };
+
+  const handleDeleteStore = async (id: string) => {
+    try {
+      await storesApi.delete(id);
+      setState(prev => ({ ...prev, stores: prev.stores.filter(s => s.id !== id) }));
+    } catch (error: any) {
+      console.error('Erro ao deletar loja:', error);
+      alert('Erro ao deletar loja: ' + error.message);
+    }
+  };
+
+  // Funções de gerenciamento de receitas diárias
+  const handleAddRevenue = async (data: any) => {
+    if (!activeStore) return;
+    
+    try {
+      const newRevenue = await dailyRevenuesApi.createOrUpdate({
+        storeId: activeStore.id,
+        ...data
+      });
+      
+      setState(prev => ({
+        ...prev,
+        dailyRevenues: {
+          ...prev.dailyRevenues,
+          [activeStore.id]: [newRevenue, ...(prev.dailyRevenues[activeStore.id] || []).filter(r => r.id !== newRevenue.id)]
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao adicionar receita:', error);
+      alert('Erro ao adicionar receita: ' + error.message);
+    }
+  };
+
+  const handleDeleteRevenue = async (id: string) => {
+    if (!activeStore) return;
+    
+    try {
+      await dailyRevenuesApi.delete(id);
+      setState(prev => ({
+        ...prev,
+        dailyRevenues: {
+          ...prev.dailyRevenues,
+          [activeStore.id]: prev.dailyRevenues[activeStore.id].filter(r => r.id !== id)
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao deletar receita:', error);
+      alert('Erro ao deletar receita: ' + error.message);
+    }
+  };
+
+  // Funções de gerenciamento de transações/compras
+  const handleAddTransaction = async (data: any) => {
+    if (!activeStore) return;
+    
+    try {
+      const newTransaction = await transactionsApi.create({
+        storeId: activeStore.id,
+        ...data
+      });
+      
+      setState(prev => ({
+        ...prev,
+        transactions: {
+          ...prev.transactions,
+          [activeStore.id]: [newTransaction, ...(prev.transactions[activeStore.id] || [])]
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao adicionar transação:', error);
+      alert('Erro ao adicionar transação: ' + error.message);
+    }
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    if (!activeStore) return;
+    
+    try {
+      await transactionsApi.delete(id);
+      setState(prev => ({
+        ...prev,
+        transactions: {
+          ...prev.transactions,
+          [activeStore.id]: prev.transactions[activeStore.id].filter(t => t.id !== id)
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao deletar transação:', error);
+      alert('Erro ao deletar transação: ' + error.message);
+    }
+  };
+
+  // Funções de gerenciamento de metas
+  const handleAddGoal = async (month: string, revenueTarget: number, cmcTarget: number, avgTicket: number) => {
+    if (!activeStore) return;
+    
+    try {
+      const newGoal = await goalsApi.createOrUpdate({
+        storeId: activeStore.id,
+        month,
+        revenueTarget,
+        cmcTarget,
+        avgTicket
+      });
+      
+      setState(prev => ({
+        ...prev,
+        goals: {
+          ...prev.goals,
+          [activeStore.id]: [newGoal, ...(prev.goals[activeStore.id] || []).filter(g => g.month !== month)]
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao adicionar meta:', error);
+      alert('Erro ao adicionar meta: ' + error.message);
+    }
+  };
+
+  const handleDeleteGoal = async (id: string) => {
+    if (!activeStore) return;
+    
+    try {
+      await goalsApi.delete(id);
+      setState(prev => ({
+        ...prev,
+        goals: {
+          ...prev.goals,
+          [activeStore.id]: prev.goals[activeStore.id].filter(g => g.id !== id)
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao deletar meta:', error);
+      alert('Erro ao deletar meta: ' + error.message);
+    }
+  };
+
+  // Funções de gerenciamento de grupos de produtos
+  const handleAddProductGroup = async (name: string, color: string, cmcTarget: number, icon: string) => {
+    if (!activeStore) return;
+    
+    try {
+      const newGroup = await productGroupsApi.create({
+        storeId: activeStore.id,
+        name,
+        color,
+        cmcTarget,
+        icon
+      });
+      
+      setState(prev => ({
+        ...prev,
+        productGroups: {
+          ...prev.productGroups,
+          [activeStore.id]: [...(prev.productGroups[activeStore.id] || []), newGroup]
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao adicionar grupo:', error);
+      alert('Erro ao adicionar grupo: ' + error.message);
+    }
+  };
+
+  const handleDeleteProductGroup = async (id: string) => {
+    if (!activeStore) return;
+    
+    try {
+      await productGroupsApi.delete(id);
+      setState(prev => ({
+        ...prev,
+        productGroups: {
+          ...prev.productGroups,
+          [activeStore.id]: prev.productGroups[activeStore.id].filter(g => g.id !== id)
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao deletar grupo:', error);
+      alert('Erro ao deletar grupo: ' + error.message);
+    }
+  };
+
+  // Funções de gerenciamento de fornecedores
+  const handleAddSupplier = async (name: string, contact: string, email: string, categories: string) => {
+    if (!activeStore) return;
+    
+    try {
+      const newSupplier = await suppliersApi.create({
+        storeId: activeStore.id,
+        name,
+        contact,
+        email,
+        categories
+      });
+      
+      setState(prev => ({
+        ...prev,
+        suppliers: {
+          ...prev.suppliers,
+          [activeStore.id]: [...(prev.suppliers[activeStore.id] || []), newSupplier]
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao adicionar fornecedor:', error);
+      alert('Erro ao adicionar fornecedor: ' + error.message);
+    }
+  };
+
+  const handleDeleteSupplier = async (id: string) => {
+    if (!activeStore) return;
+    
+    try {
+      await suppliersApi.delete(id);
+      setState(prev => ({
+        ...prev,
+        suppliers: {
+          ...prev.suppliers,
+          [activeStore.id]: prev.suppliers[activeStore.id].filter(s => s.id !== id)
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao deletar fornecedor:', error);
+      alert('Erro ao deletar fornecedor: ' + error.message);
+    }
   };
 
   if (!state.currentUser) {
@@ -124,62 +416,91 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-[#F4F7FE] flex items-center justify-center p-6">
         <div className="w-full max-w-md bg-white p-10 rounded-[40px] shadow-xl border border-slate-100 animate-fadeIn">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 text-white rounded-2xl mb-4 shadow-lg">
-              <LayoutDashboard size={32} />
+            <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-4 rounded-3xl inline-block mb-4 shadow-lg">
+              <LayoutDashboard size={32} className="text-white" />
             </div>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tighter">FinancePro</h1>
-            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Acesso ao Sistema</p>
+            <h1 className="text-3xl font-black text-slate-800 uppercase tracking-tighter mb-2">ONE MARKETING</h1>
+            <p className="text-slate-500 font-bold text-sm">Sistema de Controle Financeiro Multi-Lojas</p>
           </div>
-          {authError && <div className="mb-4 p-3 bg-rose-50 text-rose-500 rounded-xl text-xs font-bold text-center border border-rose-100">{authError}</div>}
+
+          {authError && (
+            <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-2xl mb-6 text-sm font-bold">
+              {authError}
+            </div>
+          )}
+
           <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
-            <input 
-              type="text" 
-              required 
-              placeholder="Usuário (letras minúsculas)" 
-              className="w-full p-4 rounded-2xl bg-slate-50 border-none outline-none font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500" 
-              value={authForm.user} 
-              onChange={e => setAuthForm({...authForm, user: e.target.value.toLowerCase()})} 
-            />
-            <input 
-              type="password" 
-              required 
-              placeholder="Senha (6 dígitos)" 
-              maxLength={6}
-              className="w-full p-4 rounded-2xl bg-slate-50 border-none outline-none font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500" 
-              value={authForm.password} 
-              onChange={e => setAuthForm({...authForm, password: e.target.value.replace(/\D/g, '')})} 
-            />
-            <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition-all uppercase tracking-widest text-[10px]">
-              {isRegistering ? 'Criar Minha Conta' : 'Entrar no Sistema'}
+            <div>
+              <label className="block text-xs font-black text-slate-600 uppercase tracking-widest mb-2">Usuário</label>
+              <input
+                type="text"
+                value={authForm.user}
+                onChange={e => setAuthForm(prev => ({ ...prev, user: e.target.value }))}
+                className="w-full px-5 py-4 rounded-2xl border-2 border-slate-200 focus:border-indigo-600 focus:outline-none font-bold text-slate-700 transition-all"
+                placeholder="Digite seu usuário"
+                disabled={isLoading}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-black text-slate-600 uppercase tracking-widest mb-2">Senha</label>
+              <input
+                type="password"
+                value={authForm.password}
+                onChange={e => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
+                className="w-full px-5 py-4 rounded-2xl border-2 border-slate-200 focus:border-indigo-600 focus:outline-none font-bold text-slate-700 transition-all"
+                placeholder="Digite sua senha"
+                disabled={isLoading}
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isLoading && <Loader2 size={20} className="animate-spin" />}
+              {isRegistering ? 'Criar Conta' : 'Entrar'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsRegistering(!isRegistering);
+                setAuthError('');
+                setAuthForm({ user: '', password: '' });
+              }}
+              className="w-full text-indigo-600 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-50 transition-all"
+              disabled={isLoading}
+            >
+              {isRegistering ? 'Já tenho conta' : 'Criar nova conta'}
             </button>
           </form>
-          <button onClick={() => { setIsRegistering(!isRegistering); setAuthError(''); setAuthForm({user: '', password: ''}); }} className="w-full mt-6 text-indigo-500 font-black text-[10px] uppercase tracking-widest">
-            {isRegistering ? 'Voltar para login' : 'Criar nova conta'}
-          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F7FE] text-slate-800">
-      {state.activeStoreId ? (
-        <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-6">
-          <div className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100 animate-fadeIn">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-              <div>
-                <h1 className="text-3xl font-black text-indigo-900 tracking-tight flex items-center gap-3">
-                   {activeStore?.name}
-                   <span className="text-xs bg-indigo-50 text-indigo-500 px-3 py-1 rounded-lg uppercase tracking-widest font-black border border-indigo-100">Ativa</span>
-                </h1>
-                <p className="text-slate-400 font-medium text-sm">Controle Estratégico de Custos & Performance</p>
-              </div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center bg-slate-50 px-4 py-2 rounded-2xl gap-2 font-bold text-slate-600 border border-slate-100">
-                   <UserIcon size={16} className="text-indigo-600" /> {state.currentUser.name}
+    <div className="min-h-screen bg-[#F4F7FE]">
+      {activeStore ? (
+        <div className="min-h-screen p-4 md:p-8 space-y-6">
+          <div className="bg-white rounded-[40px] p-6 md:p-8 shadow-xl border border-slate-100">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-3 rounded-2xl text-white shadow-lg">
+                  <LayoutDashboard size={24} />
                 </div>
-                
-                <button 
+                <div>
+                  <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">ONE MARKETING</h1>
+                  <p className="text-sm font-bold text-slate-500">{activeStore.name}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <button
                   onClick={() => setState(p => ({ ...p, activeStoreId: null }))}
                   className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-slate-200"
                 >
@@ -200,12 +521,18 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <HeaderCard label="FATURAMENTO" value={monthData.revenue} sub={`Média/dia: R$ ${(monthData.revenue / 30).toFixed(2)}`} color="indigo" icon={TrendingUp} />
-              <HeaderCard label="COMPRAS" value={monthData.purchases} sub="Total acumulado" color="orange" icon={ShoppingCart} />
-              <HeaderCard label="CMC ATUAL" value={`${monthData.cmc.toFixed(2)}%`} sub={`Meta: ${monthData.cmcGoal}% | Diff: ${(monthData.cmc - monthData.cmcGoal).toFixed(2)}%`} color="green" icon={Percent} />
-              <HeaderCard label="PROJEÇÃO" value={monthData.revenue} sub="Faltam 31 dias" color="purple" icon={Calendar} />
-            </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 size={32} className="animate-spin text-indigo-600" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <HeaderCard label="FATURAMENTO" value={monthData.revenue} sub={`Média/dia: R$ ${(monthData.revenue / 30).toFixed(2)}`} color="indigo" icon={TrendingUp} />
+                <HeaderCard label="COMPRAS" value={monthData.purchases} sub="Total acumulado" color="orange" icon={ShoppingCart} />
+                <HeaderCard label="CMC ATUAL" value={`${monthData.cmc.toFixed(2)}%`} sub={`Meta: ${monthData.cmcGoal}% | Diff: ${(monthData.cmc - monthData.cmcGoal).toFixed(2)}%`} color="green" icon={Percent} />
+                <HeaderCard label="PROJEÇÃO" value={monthData.revenue} sub="Faltam 31 dias" color="purple" icon={Calendar} />
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-3xl p-1 shadow-sm border border-slate-100 flex overflow-x-auto no-scrollbar">
@@ -233,25 +560,25 @@ const App: React.FC = () => {
 
           <div className="animate-fadeIn">
             {activeView === 'dashboard' && <Dashboard revenues={activeRevenues} transactions={activeTransactions} goals={activeGoals} />}
-            {activeView === 'billing' && <BillingManager revenues={activeRevenues} onAdd={data => setState(p => ({...p, dailyRevenues: {...p.dailyRevenues, [activeStore!.id]: [ {...data, id: Math.random().toString(36).substr(2, 9), storeId: activeStore!.id, total: data.salon + data.delivery + data.serviceCharge}, ...(p.dailyRevenues[activeStore!.id] || []) ] }}))} onDelete={id => setState(p => ({...p, dailyRevenues: {...p.dailyRevenues, [activeStore!.id]: p.dailyRevenues[activeStore!.id].filter(r => r.id !== id)} }))} />}
-            {activeView === 'purchases' && <PurchaseManager purchases={activeTransactions.filter(t => t.type === TransactionType.PURCHASE)} groups={activeGroups} suppliers={activeSuppliers} onAdd={data => setState(p => ({...p, transactions: {...p.transactions, [activeStore!.id]: [{id: Math.random().toString(36).substr(2, 9), storeId: activeStore!.id, ...data}, ...(p.transactions[activeStore!.id] || [])]}}))} onDelete={id => setState(p => ({...p, transactions: {...p.transactions, [activeStore!.id]: p.transactions[activeStore!.id].filter(t => t.id !== id)}}))} />}
-            {activeView === 'goals' && <GoalManager goals={activeGoals} onAdd={(m, r, c, t) => setState(p => ({...p, goals: {...p.goals, [activeStore!.id]: [{id: Math.random().toString(36).substr(2,9), storeId: activeStore!.id, month: m, revenueTarget: r, cmcTarget: c, avgTicket: t}, ...(p.goals[activeStore!.id] || [])].filter((v,i,a) => a.findIndex(x => x.month === v.month) === i)}}))} onDelete={id => setState(p => ({...p, goals: {...p.goals, [activeStore!.id]: p.goals[activeStore!.id].filter(g => g.id !== id)}}))} />}
-            {activeView === 'groups' && <ProductGroupManager groups={activeGroups} onAdd={(n, c, target, i) => setState(p => ({...p, productGroups: {...p.productGroups, [activeStore!.id]: [...(p.productGroups[activeStore!.id] || []), {id: Math.random().toString(36).substr(2, 9), name: n, color: c, cmcTarget: target, icon: i}]}}))} onDelete={id => setState(p => ({...p, productGroups: {...p.productGroups, [activeStore!.id]: p.productGroups[activeStore!.id].filter(g => g.id !== id)}}))} />}
-            {activeView === 'suppliers' && <SupplierManager suppliers={activeSuppliers} onAdd={(n, c, e, cats) => setState(p => ({...p, suppliers: {...p.suppliers, [activeStore!.id]: [...(p.suppliers[activeStore!.id] || []), {id: Math.random().toString(36).substr(2, 9), name: n, contact: c, email: e, categories: cats}]}}))} onDelete={id => setState(p => ({...p, suppliers: {...p.suppliers, [activeStore!.id]: p.suppliers[activeStore!.id].filter(s => s.id !== id)}}))} />}
+            {activeView === 'billing' && <BillingManager revenues={activeRevenues} onAdd={handleAddRevenue} onDelete={handleDeleteRevenue} />}
+            {activeView === 'purchases' && <PurchaseManager purchases={activeTransactions.filter(t => t.type === TransactionType.PURCHASE)} groups={activeGroups} suppliers={activeSuppliers} onAdd={handleAddTransaction} onDelete={handleDeleteTransaction} />}
+            {activeView === 'goals' && <GoalManager goals={activeGoals} onAdd={handleAddGoal} onDelete={handleDeleteGoal} />}
+            {activeView === 'groups' && <ProductGroupManager groups={activeGroups} onAdd={handleAddProductGroup} onDelete={handleDeleteProductGroup} />}
+            {activeView === 'suppliers' && <SupplierManager suppliers={activeSuppliers} onAdd={handleAddSupplier} onDelete={handleDeleteSupplier} />}
             {activeView === 'users-admin' && <UserManager users={state.users} stores={state.stores} accessMap={state.userStoreAccess} onToggleAccess={(u, s) => { const curr = state.userStoreAccess[u] || []; const next = curr.includes(s) ? curr.filter(id => id !== s) : [...curr, s]; setState(p => ({...p, userStoreAccess: {...p.userStoreAccess, [u]: next}})); }} />}
           </div>
           
-          {activeView === 'purchases-form' && <TransactionForm groups={activeGroups} suppliers={activeSuppliers} onAdd={data => { setState(p => ({...p, transactions: {...p.transactions, [activeStore!.id]: [{id: Math.random().toString(36).substr(2, 9), storeId: activeStore!.id, ...data}, ...(p.transactions[activeStore!.id] || [])]}})); setActiveView('purchases'); }} onClose={() => setActiveView('purchases')} initialType={TransactionType.PURCHASE} />}
+          {activeView === 'purchases-form' && <TransactionForm groups={activeGroups} suppliers={activeSuppliers} onAdd={data => { handleAddTransaction(data); setActiveView('purchases'); }} onClose={() => setActiveView('purchases')} initialType={TransactionType.PURCHASE} />}
         </div>
       ) : (
         <div className="min-h-screen flex flex-col">
           <header className="bg-white border-b border-slate-100 p-6 sticky top-0 z-50 shadow-sm">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg">
+                <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-2 rounded-xl text-white shadow-lg">
                   <LayoutDashboard size={20} />
                 </div>
-                <h1 className="text-xl font-black text-slate-800 uppercase tracking-tighter">FinancePro</h1>
+                <h1 className="text-xl font-black text-slate-800 uppercase tracking-tighter">ONE MARKETING</h1>
               </div>
               <div className="flex items-center gap-4">
                 <div className="hidden md:flex flex-col items-end mr-2">
@@ -271,8 +598,8 @@ const App: React.FC = () => {
             <StoreSelector 
               stores={userStores} 
               onSelect={id => { setState(p => ({...p, activeStoreId: id})); setActiveView('dashboard'); }} 
-              onCreate={n => { const id = `store-${Math.random().toString(36).substr(2, 9)}`; setState(p => ({...p, stores: [...p.stores, {id, name: n, ownerId: p.currentUser!.id, createdAt: new Date().toISOString()}]})); }} 
-              onDelete={id => setState(p => ({...p, stores: p.stores.filter(s => s.id !== id)}))} 
+              onCreate={handleCreateStore} 
+              onDelete={handleDeleteStore} 
               currentUser={state.currentUser} 
             />
           </main>
