@@ -1,13 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import authRoutes from './routes/auth.js';
-import storeRoutes from './routes/stores.js';
-import transactionRoutes from './routes/transactions.js';
-import supplierRoutes from './routes/suppliers.js';
-import productGroupRoutes from './routes/productGroups.js';
-import dailyRevenueRoutes from './routes/dailyRevenues.js';
-import goalRoutes from './routes/goals.js';
+import authRoutes from './routes/auth';
+import storeRoutes from './routes/stores';
+import transactionRoutes from './routes/transactions';
+import supplierRoutes from './routes/suppliers';
+import productGroupRoutes from './routes/productGroups';
+import dailyRevenueRoutes from './routes/dailyRevenues';
+import goalRoutes from './routes/goals';
 
 dotenv.config();
 
@@ -16,9 +16,10 @@ const PORT = process.env.PORT || 5000;
 
 // Configurar CORS
 const corsOptions = {
-  origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
-  credentials: true,
-  optionsSuccessStatus: 200
+  origin: process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',')
+    : true, // libera qualquer origem SEM usar '*'
+  credentials: true
 };
 
 app.use(cors(corsOptions));

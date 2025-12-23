@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "description": "Backend API para FinancePro Multi-Store",
   "main": "dist/server.js",
-  "type": "module",
-  "scripts": {
+    "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js"
