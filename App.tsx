@@ -59,7 +59,31 @@ const App: React.FC = () => {
   const loadStores = async () => {
     try {
       const storesList = await storesApi.list();
-      setState(prev => ({ ...prev, stores: storesList }));
+      
+      // Se for admin e não tiver lojas, criar as 7 lojas padrão
+      if (state.currentUser?.role === 'master' && storesList.length === 0) {
+        const defaultStores = [
+          'Paris6',
+          'Xian',
+          'Stella',
+          'New Hakata',
+          'Jardim Secreto',
+          'Mestre Cuca',
+          'Food Zone'
+        ];
+        
+        console.log('Criando lojas padrão...');
+        
+        // Criar todas as lojas em paralelo
+        const createdStores = await Promise.all(
+          defaultStores.map(name => storesApi.create(name))
+        );
+        
+        console.log('Lojas padrão criadas:', createdStores);
+        setState(prev => ({ ...prev, stores: createdStores }));
+      } else {
+        setState(prev => ({ ...prev, stores: storesList }));
+      }
     } catch (error: any) {
       console.error('Erro ao carregar lojas:', error);
     }
