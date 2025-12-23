@@ -35,13 +35,13 @@ app.use('/api/goals', goalRoutes);
 
 // Rota de health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'FinancePro API está rodando!' });
+  res.json({ status: 'OK', message: 'ONE MARKETING API está rodando!' });
 });
 
 // Rota raiz
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'FinancePro API',
+    message: 'ONE MARKETING API',
     version: '1.0.0',
     endpoints: {
       auth: '/api/auth',
@@ -66,7 +66,7 @@ app.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════╗
 ║                                           ║
-║      🚀 FinancePro API Iniciada!         ║
+║      🚀 ONE MARKETING API Iniciada!      ║
 ║                                           ║
 ║      Servidor rodando na porta ${PORT}     ║
 ║      http://localhost:${PORT}              ║
