@@ -58,6 +58,7 @@ const App: React.FC = () => {
 
   const loadStores = async () => {
     try {
+      setIsLoading(true);
       const storesList = await storesApi.list();
       
       // Se for admin e não tiver lojas, criar as 7 lojas padrão
@@ -86,6 +87,9 @@ const App: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Erro ao carregar lojas:', error);
+      alert('Erro ao carregar lojas: ' + error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -619,13 +623,22 @@ const App: React.FC = () => {
             </div>
           </header>
           <main className="flex-1">
-            <StoreSelector 
-              stores={userStores} 
-              onSelect={id => { setState(p => ({...p, activeStoreId: id})); setActiveView('dashboard'); }} 
-              onCreate={handleCreateStore} 
-              onDelete={handleDeleteStore} 
-              currentUser={state.currentUser} 
-            />
+            {isLoading ? (
+              <div className="flex items-center justify-center min-h-[50vh]">
+                <div className="text-center">
+                  <Loader2 size={48} className="animate-spin text-indigo-600 mx-auto mb-4" />
+                  <p className="text-slate-600 font-bold">Carregando lojas...</p>
+                </div>
+              </div>
+            ) : (
+              <StoreSelector 
+                stores={userStores} 
+                onSelect={id => { setState(p => ({...p, activeStoreId: id})); setActiveView('dashboard'); }} 
+                onCreate={handleCreateStore} 
+                onDelete={handleDeleteStore} 
+                currentUser={state.currentUser} 
+              />
+            )}
           </main>
         </div>
       )}
