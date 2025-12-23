@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Store, User } from '../types';
 import { Plus, Store as StoreIcon, ArrowRight, Trash2 } from 'lucide-react';
@@ -25,6 +24,9 @@ const StoreSelector: React.FC<StoreSelectorProps> = ({ stores, onSelect, onCreat
     }
   };
 
+  // Proteção: garantir que stores seja sempre um array válido
+  const safeStores = Array.isArray(stores) ? stores : [];
+
   return (
     <div className="max-w-4xl mx-auto py-12 px-6 animate-fadeIn">
       <div className="text-center mb-12">
@@ -37,7 +39,7 @@ const StoreSelector: React.FC<StoreSelectorProps> = ({ stores, onSelect, onCreat
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stores.map((store) => (
+        {safeStores.map((store) => (
           <div 
             key={store.id} 
             className="group relative bg-white p-6 rounded-[32px] border-2 border-slate-100 hover:border-indigo-500 transition-all cursor-pointer shadow-sm hover:shadow-xl"
@@ -113,7 +115,7 @@ const StoreSelector: React.FC<StoreSelectorProps> = ({ stores, onSelect, onCreat
         )}
       </div>
 
-      {!isMaster && stores.length === 0 && (
+      {!isMaster && safeStores.length === 0 && (
         <div className="mt-12 p-12 bg-white rounded-[40px] border-2 border-dashed border-slate-200 text-center animate-fadeIn">
           <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
             <StoreIcon size={40} />
