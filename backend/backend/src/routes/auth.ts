@@ -5,19 +5,16 @@ import pool from '../config/database.js';
 
 const router = Router();
 
-// Login
-router.post('/login', async (req, res) => {
+router.post('/login', async (req: Request, res: Response) => {
   try {
-    const { username, password } = req.body;
+    const { username, password } = req.body as { username?: string; password?: string };
 
     if (!username || !password) {
       return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
     }
 
-    const result = await pool.query(
-      'SELECT id, username, password, role FROM users WHERE username = $1',
-      [username]
-    );
+    // Buscar usuário
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
 
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Usuário ou senha inválidos' });
@@ -25,19 +22,29 @@ router.post('/login', async (req, res) => {
 
     const user = result.rows[0];
 
-    const passwordValid = await bcrypt.compare(password, user.password);
-
-    if (!passwordValid) {
+    // Verificar senha
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
       return res.status(401).json({ error: 'Usuário ou senha inválidos' });
     }
 
-    // Login OK
-    return res.json({
-      id: user.id,
-      username: user.username,
-      role: user.role
-    });
+    // Gerar token (o frontend espera isso)
+    const secret = process.env.JWT_SECRET || 'dev_secret_change_me';
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      secret,
+      { expiresIn: '7d' }
+    );
 
+    // Retornar no formato que o api.ts espera: { token, user }
+    return res.json({
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+      },
+    });
   } catch (err) {
     console.error('Erro no login:', err);
     return res.status(500).json({ error: 'Erro interno no servidor' });
