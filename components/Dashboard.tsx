@@ -25,11 +25,12 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, revenues, goals }) 
   const monthRevenues = revenues.filter(r => r.date.startsWith(currentMonth));
   const monthPurchases = transactions.filter(t => t.date.startsWith(currentMonth) && t.type === TransactionType.PURCHASE);
   
-  const totalRevenue = monthRevenues.reduce((sum, r) => sum + r.total, 0);
-  const totalPurchases = monthPurchases.reduce((sum, t) => sum + t.amount, 0);
+  // Forçar conversão para número
+  const totalRevenue = monthRevenues.reduce((sum, r) => sum + Number(r.total || 0), 0);
+  const totalPurchases = monthPurchases.reduce((sum, t) => sum + Number(t.amount || 0), 0);
   
   const cmc = totalRevenue > 0 ? (totalPurchases / totalRevenue) * 100 : 0;
-  const currentGoal = goals.find(g => g.month === currentMonth)?.target || 0;
+  const currentGoal = Number(goals.find(g => g.month === currentMonth)?.target || 0);
   const goalProgress = currentGoal > 0 ? Math.min((totalRevenue / currentGoal) * 100, 100) : 0;
 
   const formatCurrency = (val: number) => 
@@ -152,7 +153,7 @@ const StatCard = ({ label, value, icon: Icon, color }: any) => {
         <div>
           <p className="text-xs font-bold text-slate-400 uppercase">{label}</p>
           <h4 className="text-xl font-black text-slate-900">
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0)}
           </h4>
         </div>
       </div>
