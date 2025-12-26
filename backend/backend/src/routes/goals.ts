@@ -6,6 +6,11 @@ const router = Router();
 
 router.use(authMiddleware);
 
+// Helper para converter valores numéricos
+const parseNumeric = (value: any): number => {
+  return value !== null && value !== undefined ? parseFloat(value) : 0;
+};
+
 // Listar metas de uma loja
 router.get('/store/:storeId', async (req: Request, res: Response) => {
   try {
@@ -28,14 +33,14 @@ router.get('/store/:storeId', async (req: Request, res: Response) => {
       [storeId]
     );
 
-    // Converter snake_case para camelCase
+    // Converter snake_case para camelCase E converter números
     const goals = result.rows.map(row => ({
       id: row.id,
       storeId: row.store_id,
       month: row.month,
-      target: row.revenue_target,
-      cmcTarget: row.cmc_target,
-      avgTicket: row.avg_ticket,
+      target: parseNumeric(row.revenue_target),
+      cmcTarget: parseNumeric(row.cmc_target),
+      avgTicket: parseNumeric(row.avg_ticket),
       createdAt: row.created_at
     }));
 
@@ -75,15 +80,15 @@ router.post('/', async (req: Request, res: Response) => {
       [storeId, month, revenueTarget || 0, cmcTarget || 0, avgTicket || 0]
     );
 
-    // Converter snake_case para camelCase
+    // Converter snake_case para camelCase E converter números
     const goal = result.rows[0];
     const formattedGoal = {
       id: goal.id,
       storeId: goal.store_id,
       month: goal.month,
-      target: goal.revenue_target,
-      cmcTarget: goal.cmc_target,
-      avgTicket: goal.avg_ticket,
+      target: parseNumeric(goal.revenue_target),
+      cmcTarget: parseNumeric(goal.cmc_target),
+      avgTicket: parseNumeric(goal.avg_ticket),
       createdAt: goal.created_at
     };
 
