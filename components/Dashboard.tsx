@@ -118,7 +118,15 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, revenues, goals }) 
                   axisLine={false} 
                   tickLine={false} 
                   tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 'bold'}}
-                  tickFormatter={(str) => str.split('-').slice(2).join('/')}
+                  tickFormatter={(str) => {
+                    if (!str) return '';
+                    const cleanDate = str.split('T')[0];
+                    const parts = cleanDate.split('-');
+                    if (parts.length === 3) {
+                      return `${parts[2]}/${parts[1]}`;
+                    }
+                    return str;
+                  }}
                 />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
                 <Tooltip 
