@@ -31,7 +31,7 @@ router.post('/login', async (req: Request, res: Response) => {
     // Gerar token (o frontend espera isso)
     const secret = process.env.JWT_SECRET || 'dev_secret_change_me';
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+      { userId: user.id, username: user.username, role: user.role },
       secret,
       { expiresIn: '7d' }
     );
