@@ -28,7 +28,19 @@ router.get('/store/:storeId', async (req: Request, res: Response) => {
       [storeId]
     );
 
-    res.json(result.rows);
+    // Transformar service_charge para serviceCharge
+    const revenues = result.rows.map(row => ({
+      id: row.id,
+      storeId: row.store_id,
+      date: row.date,
+      salon: row.salon,
+      delivery: row.delivery,
+      serviceCharge: row.service_charge,
+      total: row.total,
+      createdAt: row.created_at
+    }));
+
+    res.json(revenues);
   } catch (error) {
     console.error('Erro ao listar receitas:', error);
     res.status(500).json({ error: 'Erro ao listar receitas' });
@@ -68,7 +80,20 @@ router.post('/', async (req: Request, res: Response) => {
       [storeId, date, salon || 0, delivery || 0, serviceCharge || 0, total]
     );
 
-    res.status(201).json(result.rows[0]);
+    // Transformar service_charge para serviceCharge
+    const revenue = result.rows[0];
+    const formattedRevenue = {
+      id: revenue.id,
+      storeId: revenue.store_id,
+      date: revenue.date,
+      salon: revenue.salon,
+      delivery: revenue.delivery,
+      serviceCharge: revenue.service_charge,
+      total: revenue.total,
+      createdAt: revenue.created_at
+    };
+
+    res.status(201).json(formattedRevenue);
   } catch (error) {
     console.error('Erro ao salvar receita:', error);
     res.status(500).json({ error: 'Erro ao salvar receita' });
