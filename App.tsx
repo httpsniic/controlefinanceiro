@@ -69,8 +69,19 @@ const App: React.FC = () => {
       setIsLoading(true);
       const storesList = await storesApi.list();
       
+      // REMOVER DUPLICATAS (por ID)
+      const uniqueStores = storesList.reduce((acc: Store[], store: Store) => {
+        if (!acc.find(s => s.id === store.id)) {
+          acc.push(store);
+        }
+        return acc;
+      }, []);
+      
+      console.log('📊 Lojas originais:', storesList.length);
+      console.log('📊 Lojas únicas:', uniqueStores.length);
+      
       // Se for admin e não tiver lojas, criar as 7 lojas padrão
-      if (state.currentUser?.role === 'master' && storesList.length === 0) {
+      if (state.currentUser?.role === 'master' && uniqueStores.length === 0) {
         const defaultStores = [
           'Paris6',
           'Xian',
@@ -91,16 +102,28 @@ const App: React.FC = () => {
         console.log('Lojas padrão criadas:', createdStores);
         setState(prev => ({ ...prev, stores: createdStores }));
       } else {
-        setState(prev => ({ ...prev, stores: storesList }));
+        setState(prev => ({ ...prev, stores: uniqueStores }));
       }
 
       // CARREGAR PERMISSÕES DO USUÁRIO LOGADO
       try {
+        console.log('🔑 Carregando permissões...');
         const accessMap = await userStoreAccessApi.list();
-        setState(prev => ({ ...prev, userStoreAccess: accessMap }));
-        console.log('Permissões carregadas:', accessMap);
+        console.log('🔑 Permissões recebidas:', accessMap);
+        console.log('🔑 Tipo do accessMap:', typeof accessMap);
+        console.log('🔑 É objeto?', accessMap && typeof accessMap === 'object');
+        
+        // Validar que accessMap é um objeto válido
+        if (accessMap && typeof accessMap === 'object') {
+          setState(prev => ({ ...prev, userStoreAccess: accessMap }));
+          console.log('✅ Permissões aplicadas ao state');
+        } else {
+          console.warn('⚠️ accessMap inválido, usando objeto vazio');
+          setState(prev => ({ ...prev, userStoreAccess: {} }));
+        }
       } catch (error) {
-        console.error('Erro ao carregar permissões:', error);
+        console.error('❌ Erro ao carregar permissões:', error);
+        setState(prev => ({ ...prev, userStoreAccess: {} }));
       }
     } catch (error: any) {
       console.error('Erro ao carregar lojas:', error);
