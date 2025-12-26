@@ -36,19 +36,10 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, revenues, goals }) 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   const formatDate = (dateStr: string) => {
-    try {
-      const date = dateStr.includes('T') 
-        ? new Date(dateStr) 
-        : new Date(dateStr + 'T00:00:00');
-      
-      if (isNaN(date.getTime())) {
-        return dateStr;
-      }
-      
-      return date.toLocaleDateString('pt-BR');
-    } catch {
-      return dateStr;
-    }
+    if (!dateStr) return '';
+    const cleanDate = dateStr.split('T')[0];
+    const [year, month, day] = cleanDate.split('-');
+    return `${day}/${month}/${year}`;
   };
 
   return (

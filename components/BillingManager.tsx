@@ -35,20 +35,10 @@ const BillingManager: React.FC<BillingManagerProps> = ({ revenues, onAdd, onDele
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   const formatDate = (dateStr: string) => {
-    try {
-      // Tenta vários formatos
-      const date = dateStr.includes('T') 
-        ? new Date(dateStr) 
-        : new Date(dateStr + 'T00:00:00');
-      
-      if (isNaN(date.getTime())) {
-        return dateStr; // Retorna a string original se falhar
-      }
-      
-      return date.toLocaleDateString('pt-BR');
-    } catch {
-      return dateStr;
-    }
+    if (!dateStr) return '';
+    const cleanDate = dateStr.split('T')[0];
+    const [year, month, day] = cleanDate.split('-');
+    return `${day}/${month}/${year}`;
   };
 
   return (
