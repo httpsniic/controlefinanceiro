@@ -31,6 +31,23 @@ const BillingManager: React.FC<BillingManagerProps> = ({ revenues, onAdd, onDele
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
+  const formatDate = (dateStr: string) => {
+    try {
+      // Tenta vários formatos
+      const date = dateStr.includes('T') 
+        ? new Date(dateStr) 
+        : new Date(dateStr + 'T00:00:00');
+      
+      if (isNaN(date.getTime())) {
+        return dateStr; // Retorna a string original se falhar
+      }
+      
+      return date.toLocaleDateString('pt-BR');
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fadeIn">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -116,12 +133,12 @@ const BillingManager: React.FC<BillingManagerProps> = ({ revenues, onAdd, onDele
                       <tr key={rev.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-8 py-5 text-sm font-medium flex items-center gap-2">
                           <CalendarIcon size={16} className="text-slate-300" />
-                          {new Date(rev.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                          {formatDate(rev.date)}
                         </td>
-                        <td className="px-8 py-5 text-sm text-right text-slate-600">{formatCurrency(rev.salon)}</td>
-                        <td className="px-8 py-5 text-sm text-right text-slate-600">{formatCurrency(rev.delivery)}</td>
-                        <td className="px-8 py-5 text-sm text-right text-slate-500 italic">{formatCurrency(rev.serviceCharge)}</td>
-                        <td className="px-8 py-5 text-sm text-right font-black text-indigo-600">{formatCurrency(rev.total)}</td>
+                        <td className="px-8 py-5 text-sm text-right text-slate-600">{formatCurrency(rev.salon || 0)}</td>
+                        <td className="px-8 py-5 text-sm text-right text-slate-600">{formatCurrency(rev.delivery || 0)}</td>
+                        <td className="px-8 py-5 text-sm text-right text-slate-500 italic">{formatCurrency(rev.serviceCharge || 0)}</td>
+                        <td className="px-8 py-5 text-sm text-right font-black text-indigo-600">{formatCurrency(rev.total || 0)}</td>
                         <td className="px-8 py-5 text-right">
                           <button onClick={() => onDelete(rev.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors">
                             <Trash2 size={18} />
