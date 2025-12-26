@@ -19,12 +19,15 @@ const BillingManager: React.FC<BillingManagerProps> = ({ revenues, onAdd, onDele
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd({
+    const data = {
       date: dateToISO(formData.date),
       salon: parseCurrency(formData.salon),
       delivery: parseCurrency(formData.delivery),
-      serviceCharge: parseFloat(formData.serviceCharge) || 0
-    });
+      serviceCharge: parseCurrency(formData.serviceCharge)
+    };
+    console.log('📤 Dados enviados:', data);
+    console.log('💰 Service Charge:', formData.serviceCharge, '→', parseCurrency(formData.serviceCharge));
+    onAdd(data);
     setFormData({ ...formData, salon: '', delivery: '', serviceCharge: '' });
   };
 
@@ -92,12 +95,11 @@ const BillingManager: React.FC<BillingManagerProps> = ({ revenues, onAdd, onDele
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase mb-1">10% / Serviço (R$)</label>
               <input 
-                type="number" 
-                step="0.01"
-                placeholder="0.00"
+                type="text" 
+                placeholder="0,00"
                 className="w-full p-3 rounded-xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-right font-bold"
                 value={formData.serviceCharge}
-                onChange={e => setFormData({...formData, serviceCharge: e.target.value})}
+                onChange={e => setFormData({...formData, serviceCharge: maskCurrency(e.target.value)})}
               />
             </div>
             <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-100">
