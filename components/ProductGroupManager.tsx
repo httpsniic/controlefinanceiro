@@ -1,87 +1,163 @@
+import { Router, Request, Response } from 'express';
+import pool from '../config/database.js';
+import { authMiddleware } from '../middleware/auth.js';
 
-import React, { useState } from 'react';
-import { ProductGroup } from '../types';
-import { Plus, Trash2 } from 'lucide-react';
+const router = Router();
 
-interface ProductGroupManagerProps {
-  groups: ProductGroup[];
-  onAdd: (name: string, color: string, target: number, icon: string) => void;
-  onDelete: (id: string) => void;
-}
+router.use(authMiddleware);
 
-const ProductGroupManager: React.FC<ProductGroupManagerProps> = ({ groups, onAdd, onDelete }) => {
-  const [formData, setFormData] = useState({ name: '', color: '#4F46E5', target: '30' });
+// Listar grupos de produtos de uma loja
+router.get('/store/:storeId', async (req: Request, res: Response) => {
+  try {
+    const { storeId } = req.params;
+    const userId = req.user!.userId;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.name) {
-      onAdd(formData.name, formData.color, parseFloat(formData.target), "");
-      setFormData({ name: '', color: '#4F46E5', target: '30' });
+    const accessCheck = await pool.query(
+      `SELECT 1 FROM stores s
+       LEFT JOIN user_store_access usa ON s.id = usa.store_id
+       WHERE s.id = $1 AND (s.owner_id = $2 OR usa.user_id = $2)`,
+      [storeId, userId]
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Sem acesso a esta loja' });
     }
-  };
 
-  return (
-    <div className="space-y-8 animate-fadeIn">
-      <h2 className="text-xl font-black text-slate-800 px-2">Gestão de Grupos</h2>
+    const result = await pool.query(
+      'SELECT * FROM product_groups WHERE store_id = $1 ORDER BY name',
+      [storeId]
+    );
 
-      <div className="bg-indigo-50/50 border border-indigo-100 p-8 rounded-[32px]">
-        <h3 className="text-sm font-black text-indigo-900 mb-6 flex items-center gap-2">
-          <Plus size={18} /> Cadastrar Novo Grupo
-        </h3>
-        <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row items-end gap-4">
-          <div className="flex-[2] w-full">
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Nome do Grupo</label>
-            <input 
-              type="text" required placeholder="Ex: Pizza, Bebidas..."
-              className="w-full p-4 rounded-2xl bg-white border border-slate-200 outline-none font-bold"
-              value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
-            />
-          </div>
-          <div className="flex-1 w-full">
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Cor</label>
-            <input 
-              type="color" className="w-full h-[58px] p-1 rounded-2xl bg-white border border-slate-200 cursor-pointer"
-              value={formData.color} onChange={e => setFormData({...formData, color: e.target.value})}
-            />
-          </div>
-          <div className="flex-1 w-full">
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Meta CMV (%)</label>
-            <input 
-              type="number" required
-              className="w-full p-4 rounded-2xl bg-white border border-slate-200 outline-none font-bold text-center"
-              value={formData.target} onChange={e => setFormData({...formData, target: e.target.value})}
-            />
-          </div>
-          <button type="submit" className="w-full lg:w-auto bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 h-[58px] shadow-lg">
-             Adicionar Grupo
-          </button>
-        </form>
-      </div>
+    // Converter snake_case para camelCase
+    const groups = result.rows.map(row => ({
+      id: row.id,
+      storeId: row.store_id,
+      name: row.name,
+      color: row.color,
+      cmcTarget: row.cmc_target,
+      icon: row.icon,
+      createdAt: row.created_at
+    }));
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {groups.map(group => (
-          <div key={group.id} className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm relative group overflow-hidden">
-            <div className="absolute top-0 left-0 w-1.5 h-full" style={{ backgroundColor: group.color }}></div>
-            <div className="flex items-center justify-between mb-6">
-              <div className="p-4 bg-slate-50 rounded-2xl">
-                <div className="w-8 h-8 rounded-full" style={{ backgroundColor: group.color }}></div>
-              </div>
-              <button onClick={() => onDelete(group.id)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-rose-500 transition-all">
-                <Trash2 size={18} />
-              </button>
-            </div>
-            <h4 className="text-xl font-black text-slate-800 mb-4">{group.name}</h4>
-            <div className="space-y-4">
-               <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Meta CMV</span>
-                  <span className="text-sm font-black text-slate-700">{group.cmcTarget}%</span>
-               </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+    res.json(groups);
+  } catch (error) {
+    console.error('Erro ao listar grupos:', error);
+    res.status(500).json({ error: 'Erro ao listar grupos' });
+  }
+});
 
-export default ProductGroupManager;
+// Criar grupo de produtos
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const { storeId, name, color, cmcTarget, icon } = req.body;
+
+    const accessCheck = await pool.query(
+      `SELECT 1 FROM stores s
+       LEFT JOIN user_store_access usa ON s.id = usa.store_id
+       WHERE s.id = $1 AND (s.owner_id = $2 OR usa.user_id = $2)`,
+      [storeId, userId]
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Sem acesso a esta loja' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO product_groups (store_id, name, color, cmc_target, icon)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [storeId, name, color || '#3b82f6', cmcTarget || 0, icon || 'Package']
+    );
+
+    // Converter snake_case para camelCase
+    const group = result.rows[0];
+    const formattedGroup = {
+      id: group.id,
+      storeId: group.store_id,
+      name: group.name,
+      color: group.color,
+      cmcTarget: group.cmc_target,
+      icon: group.icon,
+      createdAt: group.created_at
+    };
+
+    res.status(201).json(formattedGroup);
+  } catch (error) {
+    console.error('Erro ao criar grupo:', error);
+    res.status(500).json({ error: 'Erro ao criar grupo' });
+  }
+});
+
+// Atualizar grupo de produtos
+router.put('/:id', async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const { id } = req.params;
+    const { name, color, cmcTarget, icon } = req.body;
+
+    const accessCheck = await pool.query(
+      `SELECT pg.store_id FROM product_groups pg
+       INNER JOIN stores s ON pg.store_id = s.id
+       LEFT JOIN user_store_access usa ON s.id = usa.store_id
+       WHERE pg.id = $1 AND (s.owner_id = $2 OR usa.user_id = $2)`,
+      [id, userId]
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Sem permissão para editar este grupo' });
+    }
+
+    const result = await pool.query(
+      `UPDATE product_groups 
+       SET name = $1, color = $2, cmc_target = $3, icon = $4
+       WHERE id = $5 RETURNING *`,
+      [name, color, cmcTarget, icon, id]
+    );
+
+    // Converter snake_case para camelCase
+    const group = result.rows[0];
+    const formattedGroup = {
+      id: group.id,
+      storeId: group.store_id,
+      name: group.name,
+      color: group.color,
+      cmcTarget: group.cmc_target,
+      icon: group.icon,
+      createdAt: group.created_at
+    };
+
+    res.json(formattedGroup);
+  } catch (error) {
+    console.error('Erro ao atualizar grupo:', error);
+    res.status(500).json({ error: 'Erro ao atualizar grupo' });
+  }
+});
+
+// Deletar grupo de produtos
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const { id } = req.params;
+
+    const accessCheck = await pool.query(
+      `SELECT pg.store_id FROM product_groups pg
+       INNER JOIN stores s ON pg.store_id = s.id
+       LEFT JOIN user_store_access usa ON s.id = usa.store_id
+       WHERE pg.id = $1 AND (s.owner_id = $2 OR usa.user_id = $2)`,
+      [id, userId]
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Sem permissão para deletar este grupo' });
+    }
+
+    await pool.query('DELETE FROM product_groups WHERE id = $1', [id]);
+
+    res.json({ message: 'Grupo deletado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao deletar grupo:', error);
+    res.status(500).json({ error: 'Erro ao deletar grupo' });
+  }
+});
+
+export default router;
