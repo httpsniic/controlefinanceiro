@@ -28,7 +28,18 @@ router.get('/store/:storeId', async (req: Request, res: Response) => {
       [storeId]
     );
 
-    res.json(result.rows);
+    // Converter snake_case para camelCase
+    const goals = result.rows.map(row => ({
+      id: row.id,
+      storeId: row.store_id,
+      month: row.month,
+      target: row.revenue_target,
+      cmcTarget: row.cmc_target,
+      avgTicket: row.avg_ticket,
+      createdAt: row.created_at
+    }));
+
+    res.json(goals);
   } catch (error) {
     console.error('Erro ao listar metas:', error);
     res.status(500).json({ error: 'Erro ao listar metas' });
@@ -64,7 +75,19 @@ router.post('/', async (req: Request, res: Response) => {
       [storeId, month, revenueTarget || 0, cmcTarget || 0, avgTicket || 0]
     );
 
-    res.status(201).json(result.rows[0]);
+    // Converter snake_case para camelCase
+    const goal = result.rows[0];
+    const formattedGoal = {
+      id: goal.id,
+      storeId: goal.store_id,
+      month: goal.month,
+      target: goal.revenue_target,
+      cmcTarget: goal.cmc_target,
+      avgTicket: goal.avg_ticket,
+      createdAt: goal.created_at
+    };
+
+    res.status(201).json(formattedGoal);
   } catch (error) {
     console.error('Erro ao salvar meta:', error);
     res.status(500).json({ error: 'Erro ao salvar meta' });
