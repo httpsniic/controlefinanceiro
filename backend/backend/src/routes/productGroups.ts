@@ -28,7 +28,18 @@ router.get('/store/:storeId', async (req: Request, res: Response) => {
       [storeId]
     );
 
-    res.json(result.rows);
+    // Converter snake_case para camelCase
+    const groups = result.rows.map(row => ({
+      id: row.id,
+      storeId: row.store_id,
+      name: row.name,
+      color: row.color,
+      cmcTarget: row.cmc_target,
+      icon: row.icon,
+      createdAt: row.created_at
+    }));
+
+    res.json(groups);
   } catch (error) {
     console.error('Erro ao listar grupos:', error);
     res.status(500).json({ error: 'Erro ao listar grupos' });
@@ -58,7 +69,19 @@ router.post('/', async (req: Request, res: Response) => {
       [storeId, name, color || '#3b82f6', cmcTarget || 0, icon || 'Package']
     );
 
-    res.status(201).json(result.rows[0]);
+    // Converter snake_case para camelCase
+    const group = result.rows[0];
+    const formattedGroup = {
+      id: group.id,
+      storeId: group.store_id,
+      name: group.name,
+      color: group.color,
+      cmcTarget: group.cmc_target,
+      icon: group.icon,
+      createdAt: group.created_at
+    };
+
+    res.status(201).json(formattedGroup);
   } catch (error) {
     console.error('Erro ao criar grupo:', error);
     res.status(500).json({ error: 'Erro ao criar grupo' });
@@ -91,7 +114,19 @@ router.put('/:id', async (req: Request, res: Response) => {
       [name, color, cmcTarget, icon, id]
     );
 
-    res.json(result.rows[0]);
+    // Converter snake_case para camelCase
+    const group = result.rows[0];
+    const formattedGroup = {
+      id: group.id,
+      storeId: group.store_id,
+      name: group.name,
+      color: group.color,
+      cmcTarget: group.cmc_target,
+      icon: group.icon,
+      createdAt: group.created_at
+    };
+
+    res.json(formattedGroup);
   } catch (error) {
     console.error('Erro ao atualizar grupo:', error);
     res.status(500).json({ error: 'Erro ao atualizar grupo' });
