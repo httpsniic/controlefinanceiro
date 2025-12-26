@@ -4,8 +4,12 @@ import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
-// Todas as rotas precisam de autenticação
 router.use(authMiddleware);
+
+// Helper para converter valores numéricos
+const parseNumeric = (value: any): number => {
+  return value !== null && value !== undefined ? parseFloat(value) : 0;
+};
 
 // Listar transações de uma loja
 router.get('/store/:storeId', async (req: Request, res: Response) => {
@@ -13,7 +17,6 @@ router.get('/store/:storeId', async (req: Request, res: Response) => {
     const { storeId } = req.params;
     const userId = req.user!.userId;
 
-    // Verificar acesso à loja
     const accessCheck = await pool.query(
       `SELECT 1 FROM stores s
        LEFT JOIN user_store_access usa ON s.id = usa.store_id
@@ -37,13 +40,13 @@ router.get('/store/:storeId', async (req: Request, res: Response) => {
       [storeId]
     );
 
-    // Converter snake_case para camelCase
+    // Converter snake_case para camelCase E converter números
     const transactions = result.rows.map(row => ({
       id: row.id,
       storeId: row.store_id,
       type: row.type,
       description: row.description,
-      amount: row.amount,
+      amount: parseNumeric(row.amount),
       date: row.date,
       dueDate: row.due_date,
       groupId: row.group_id,
@@ -77,7 +80,6 @@ router.post('/', async (req: Request, res: Response) => {
       invoiceNumber
     } = req.body;
 
-    // Verificar acesso à loja
     const accessCheck = await pool.query(
       `SELECT 1 FROM stores s
        LEFT JOIN user_store_access usa ON s.id = usa.store_id
@@ -97,14 +99,14 @@ router.post('/', async (req: Request, res: Response) => {
       [storeId, type, description, amount, date, dueDate || null, groupId || null, supplierId || null, invoiceNumber || null]
     );
 
-    // Converter snake_case para camelCase
+    // Converter snake_case para camelCase E converter números
     const transaction = result.rows[0];
     const formattedTransaction = {
       id: transaction.id,
       storeId: transaction.store_id,
       type: transaction.type,
       description: transaction.description,
-      amount: transaction.amount,
+      amount: parseNumeric(transaction.amount),
       date: transaction.date,
       dueDate: transaction.due_date,
       groupId: transaction.group_id,
@@ -136,7 +138,6 @@ router.put('/:id', async (req: Request, res: Response) => {
       invoiceNumber
     } = req.body;
 
-    // Verificar acesso
     const accessCheck = await pool.query(
       `SELECT t.store_id FROM transactions t
        INNER JOIN stores s ON t.store_id = s.id
@@ -158,14 +159,14 @@ router.put('/:id', async (req: Request, res: Response) => {
       [type, description, amount, date, dueDate || null, groupId || null, supplierId || null, invoiceNumber || null, id]
     );
 
-    // Converter snake_case para camelCase
+    // Converter snake_case para camelCase E converter números
     const transaction = result.rows[0];
     const formattedTransaction = {
       id: transaction.id,
       storeId: transaction.store_id,
       type: transaction.type,
       description: transaction.description,
-      amount: transaction.amount,
+      amount: parseNumeric(transaction.amount),
       date: transaction.date,
       dueDate: transaction.due_date,
       groupId: transaction.group_id,
@@ -187,7 +188,6 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const userId = req.user!.userId;
     const { id } = req.params;
 
-    // Verificar acesso
     const accessCheck = await pool.query(
       `SELECT t.store_id FROM transactions t
        INNER JOIN stores s ON t.store_id = s.id

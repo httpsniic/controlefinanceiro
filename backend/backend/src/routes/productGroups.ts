@@ -6,6 +6,11 @@ const router = Router();
 
 router.use(authMiddleware);
 
+// Helper para converter valores numéricos
+const parseNumeric = (value: any): number => {
+  return value !== null && value !== undefined ? parseFloat(value) : 0;
+};
+
 // Listar grupos de produtos de uma loja
 router.get('/store/:storeId', async (req: Request, res: Response) => {
   try {
@@ -28,13 +33,13 @@ router.get('/store/:storeId', async (req: Request, res: Response) => {
       [storeId]
     );
 
-    // Converter snake_case para camelCase
+    // Converter snake_case para camelCase E converter números
     const groups = result.rows.map(row => ({
       id: row.id,
       storeId: row.store_id,
       name: row.name,
       color: row.color,
-      cmcTarget: row.cmc_target,
+      cmcTarget: parseNumeric(row.cmc_target),
       icon: row.icon,
       createdAt: row.created_at
     }));
@@ -69,14 +74,14 @@ router.post('/', async (req: Request, res: Response) => {
       [storeId, name, color || '#3b82f6', cmcTarget || 0, icon || 'Package']
     );
 
-    // Converter snake_case para camelCase
+    // Converter snake_case para camelCase E converter números
     const group = result.rows[0];
     const formattedGroup = {
       id: group.id,
       storeId: group.store_id,
       name: group.name,
       color: group.color,
-      cmcTarget: group.cmc_target,
+      cmcTarget: parseNumeric(group.cmc_target),
       icon: group.icon,
       createdAt: group.created_at
     };
@@ -114,14 +119,14 @@ router.put('/:id', async (req: Request, res: Response) => {
       [name, color, cmcTarget, icon, id]
     );
 
-    // Converter snake_case para camelCase
+    // Converter snake_case para camelCase E converter números
     const group = result.rows[0];
     const formattedGroup = {
       id: group.id,
       storeId: group.store_id,
       name: group.name,
       color: group.color,
-      cmcTarget: group.cmc_target,
+      cmcTarget: parseNumeric(group.cmc_target),
       icon: group.icon,
       createdAt: group.created_at
     };

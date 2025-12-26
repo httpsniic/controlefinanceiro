@@ -6,6 +6,11 @@ const router = Router();
 
 router.use(authMiddleware);
 
+// Helper para converter valores numéricos
+const parseNumeric = (value: any): number => {
+  return value !== null && value !== undefined ? parseFloat(value) : 0;
+};
+
 // Listar receitas diárias de uma loja
 router.get('/store/:storeId', async (req: Request, res: Response) => {
   try {
@@ -28,15 +33,15 @@ router.get('/store/:storeId', async (req: Request, res: Response) => {
       [storeId]
     );
 
-    // Transformar service_charge para serviceCharge
+    // Converter snake_case para camelCase E converter números
     const revenues = result.rows.map(row => ({
       id: row.id,
       storeId: row.store_id,
       date: row.date,
-      salon: row.salon,
-      delivery: row.delivery,
-      serviceCharge: row.service_charge,
-      total: row.total,
+      salon: parseNumeric(row.salon),
+      delivery: parseNumeric(row.delivery),
+      serviceCharge: parseNumeric(row.service_charge),
+      total: parseNumeric(row.total),
       createdAt: row.created_at
     }));
 
@@ -66,7 +71,6 @@ router.post('/', async (req: Request, res: Response) => {
 
     const total = (salon || 0) + (delivery || 0) + (serviceCharge || 0);
 
-    // Usar UPSERT (INSERT ... ON CONFLICT UPDATE)
     const result = await pool.query(
       `INSERT INTO daily_revenues (store_id, date, salon, delivery, service_charge, total)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -80,16 +84,16 @@ router.post('/', async (req: Request, res: Response) => {
       [storeId, date, salon || 0, delivery || 0, serviceCharge || 0, total]
     );
 
-    // Transformar service_charge para serviceCharge
+    // Converter snake_case para camelCase E converter números
     const revenue = result.rows[0];
     const formattedRevenue = {
       id: revenue.id,
       storeId: revenue.store_id,
       date: revenue.date,
-      salon: revenue.salon,
-      delivery: revenue.delivery,
-      serviceCharge: revenue.service_charge,
-      total: revenue.total,
+      salon: parseNumeric(revenue.salon),
+      delivery: parseNumeric(revenue.delivery),
+      serviceCharge: parseNumeric(revenue.service_charge),
+      total: parseNumeric(revenue.total),
       createdAt: revenue.created_at
     };
 
