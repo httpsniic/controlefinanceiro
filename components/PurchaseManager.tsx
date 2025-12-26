@@ -21,6 +21,13 @@ const PurchaseManager: React.FC<PurchaseManagerProps> = ({ purchases, groups, su
     description: 'Compra de Insumos'
   });
 
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const cleanDate = dateStr.split('T')[0];
+    const [year, month, day] = cleanDate.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.amount || !formData.groupId) return;
@@ -133,10 +140,10 @@ const PurchaseManager: React.FC<PurchaseManagerProps> = ({ purchases, groups, su
             <tbody className="divide-y divide-slate-50">
               {purchases.map(p => (
                 <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-8 py-4 text-sm font-bold text-slate-600">{new Date(p.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                  <td className="px-8 py-4 text-sm font-bold text-slate-600">{formatDate(p.date)}</td>
                   <td className="px-8 py-4 text-sm font-medium text-slate-500">{p.invoiceNumber || '-'}</td>
                   <td className="px-8 py-4 text-sm font-medium">{suppliers.find(s => s.id === p.supplierId)?.name || '-'}</td>
-                  <td className="px-8 py-4 text-xs font-black text-indigo-400 uppercase">{groups.find(g => g.id === p.groupId)?.name}</td>
+                  <td className="px-8 py-4 text-xs font-black text-indigo-400 uppercase">{groups.find(g => g.id === p.groupId)?.name || '-'}</td>
                   <td className="px-8 py-4 text-sm font-black text-right">{new Intl.NumberFormat('pt-BR', {style: 'currency', currency:'BRL'}).format(p.amount)}</td>
                   <td className="px-8 py-4 text-right">
                     <button onClick={() => onDelete(p.id)} className="text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={18}/></button>
