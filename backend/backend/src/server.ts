@@ -9,6 +9,7 @@ import supplierRoutes from './routes/suppliers';
 import productGroupRoutes from './routes/productGroups';
 import dailyRevenueRoutes from './routes/dailyRevenues';
 import goalRoutes from './routes/goals';
+import userRoutes from './routes/users';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/product-groups', productGroupRoutes);
 app.use('/api/daily-revenues', dailyRevenueRoutes);
 app.use('/api/goals', goalRoutes);
+app.use('/api/users', userRoutes);
 
 // =========================
 // Health / Root
@@ -45,7 +47,7 @@ app.use('/api/goals', goalRoutes);
 app.get('/', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
-    message: 'Financeiro API rodando',
+    message: 'ONE MARKETING API rodando',
     endpoints: {
       auth: '/api/auth',
       stores: '/api/stores',
@@ -53,7 +55,8 @@ app.get('/', (req: Request, res: Response) => {
       suppliers: '/api/suppliers',
       productGroups: '/api/product-groups',
       dailyRevenues: '/api/daily-revenues',
-      goals: '/api/goals'
+      goals: '/api/goals',
+      users: '/api/users'
     }
   });
 });
