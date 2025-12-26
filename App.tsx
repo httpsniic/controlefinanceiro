@@ -41,6 +41,7 @@ const App: React.FC = () => {
   
   const [activeView, setActiveView] = useState<string>('dashboard');
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [allUsers, setAllUsers] = useState<User[]>([]);
 
   // Carregar dados quando selecionar uma loja
   useEffect(() => {
@@ -55,6 +56,13 @@ const App: React.FC = () => {
       loadStores();
     }
   }, [state.currentUser]);
+
+  // Carregar usuários quando entrar na aba ACESSOS
+  useEffect(() => {
+    if (activeView === 'users-admin' && state.currentUser?.role === 'master') {
+      loadUsers();
+    }
+  }, [activeView, state.currentUser]);
 
   const loadStores = async () => {
     try {
@@ -90,6 +98,26 @@ const App: React.FC = () => {
       alert('Erro ao carregar lojas: ' + error.message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const response = await fetch('https://sistema-cmc-server.onrender.com/api/users', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao carregar usuários');
+      }
+
+      const users = await response.json();
+      setAllUsers(users);
+    } catch (error: any) {
+      console.error('Erro ao carregar usuários:', error);
     }
   };
 
@@ -593,7 +621,7 @@ const App: React.FC = () => {
             {activeView === 'goals' && <GoalManager goals={activeGoals} onAdd={handleAddGoal} onDelete={handleDeleteGoal} />}
             {activeView === 'groups' && <ProductGroupManager groups={activeGroups} onAdd={handleAddProductGroup} onDelete={handleDeleteProductGroup} />}
             {activeView === 'suppliers' && <SupplierManager suppliers={activeSuppliers} onAdd={handleAddSupplier} onDelete={handleDeleteSupplier} />}
-            {activeView === 'users-admin' && <UserManager users={state.users} stores={state.stores} accessMap={state.userStoreAccess} onToggleAccess={(u, s) => { const curr = state.userStoreAccess[u] || []; const next = curr.includes(s) ? curr.filter(id => id !== s) : [...curr, s]; setState(p => ({...p, userStoreAccess: {...p.userStoreAccess, [u]: next}})); }} />}
+            {activeView === 'users-admin' && <UserManager users={allUsers} stores={state.stores} accessMap={state.userStoreAccess} onToggleAccess={(u, s) => { const curr = state.userStoreAccess[u] || []; const next = curr.includes(s) ? curr.filter(id => id !== s) : [...curr, s]; setState(p => ({...p, userStoreAccess: {...p.userStoreAccess, [u]: next}})); }} />}
           </div>
           
           {activeView === 'purchases-form' && <TransactionForm groups={activeGroups} suppliers={activeSuppliers} onAdd={data => { handleAddTransaction(data); setActiveView('purchases'); }} onClose={() => setActiveView('purchases')} initialType={TransactionType.PURCHASE} />}
