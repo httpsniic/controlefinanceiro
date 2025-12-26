@@ -93,6 +93,15 @@ const App: React.FC = () => {
       } else {
         setState(prev => ({ ...prev, stores: storesList }));
       }
+
+      // CARREGAR PERMISSÕES DO USUÁRIO LOGADO
+      try {
+        const accessMap = await userStoreAccessApi.list();
+        setState(prev => ({ ...prev, userStoreAccess: accessMap }));
+        console.log('Permissões carregadas:', accessMap);
+      } catch (error) {
+        console.error('Erro ao carregar permissões:', error);
+      }
     } catch (error: any) {
       console.error('Erro ao carregar lojas:', error);
       alert('Erro ao carregar lojas: ' + error.message);
