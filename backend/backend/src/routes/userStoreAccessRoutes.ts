@@ -6,37 +6,51 @@ const router = Router();
 
 router.use(authMiddleware);
 
-// Listar acessos de todos os usuários (apenas master)
+// Listar acessos
 router.get('/', async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     const userRole = req.user!.role;
 
-    if (userRole !== 'master') {
-      return res.status(403).json({ error: 'Apenas master pode ver acessos' });
+    if (userRole === 'master') {
+      // MASTER: vê permissões de TODOS os usuários
+      const result = await pool.query(
+        'SELECT user_id, store_id FROM user_store_access'
+      );
+
+      // Agrupar por usuário
+      const accessMap: Record<string, string[]> = {};
+      result.rows.forEach(row => {
+        if (!accessMap[row.user_id]) {
+          accessMap[row.user_id] = [];
+        }
+        accessMap[row.user_id].push(row.store_id);
+      });
+
+      return res.json(accessMap);
+    } else {
+      // USUÁRIO COMUM: vê APENAS suas próprias permissões
+      const result = await pool.query(
+        'SELECT store_id FROM user_store_access WHERE user_id = $1',
+        [userId]
+      );
+
+      const storeIds = result.rows.map(row => row.store_id);
+      
+      // Retornar no mesmo formato (accessMap)
+      const accessMap: Record<string, string[]> = {
+        [userId]: storeIds
+      };
+
+      return res.json(accessMap);
     }
-
-    const result = await pool.query(
-      'SELECT user_id, store_id FROM user_store_access'
-    );
-
-    // Agrupar por usuário
-    const accessMap: Record<string, string[]> = {};
-    result.rows.forEach(row => {
-      if (!accessMap[row.user_id]) {
-        accessMap[row.user_id] = [];
-      }
-      accessMap[row.user_id].push(row.store_id);
-    });
-
-    res.json(accessMap);
   } catch (error) {
     console.error('Erro ao listar acessos:', error);
     res.status(500).json({ error: 'Erro ao listar acessos' });
   }
 });
 
-// Atualizar acesso de um usuário a uma loja
+// Atualizar acesso de um usuário a uma loja (apenas master)
 router.post('/toggle', async (req: Request, res: Response) => {
   try {
     const currentUserId = req.user!.userId;
