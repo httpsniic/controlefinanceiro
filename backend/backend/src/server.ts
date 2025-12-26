@@ -10,6 +10,7 @@ import productGroupRoutes from './routes/productGroups';
 import dailyRevenueRoutes from './routes/dailyRevenues';
 import goalRoutes from './routes/goals';
 import userRoutes from './routes/users';
+import userStoreAccessRoutes from './routes/userStoreAccess';
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ app.use('/api/product-groups', productGroupRoutes);
 app.use('/api/daily-revenues', dailyRevenueRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/user-store-access', userStoreAccessRoutes);
 
 // =========================
 // Health / Root
@@ -56,7 +58,8 @@ app.get('/', (req: Request, res: Response) => {
       productGroups: '/api/product-groups',
       dailyRevenues: '/api/daily-revenues',
       goals: '/api/goals',
-      users: '/api/users'
+      users: '/api/users',
+      userStoreAccess: '/api/user-store-access'
     }
   });
 });
