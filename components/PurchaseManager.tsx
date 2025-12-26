@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Transaction, ProductGroup, Supplier, TransactionType } from '../types';
 import { Plus, Trash2, CalendarDays } from 'lucide-react';
@@ -15,7 +14,6 @@ interface PurchaseManagerProps {
 const PurchaseManager: React.FC<PurchaseManagerProps> = ({ purchases, groups, suppliers, onAdd, onDelete }) => {
   const [formData, setFormData] = useState({
     date: isoToDisplayDate(new Date().toISOString().split('T')[0]),
-    dueDate: '', // Novo campo
     amount: '',
     groupId: '',
     supplierId: '',
@@ -31,13 +29,11 @@ const PurchaseManager: React.FC<PurchaseManagerProps> = ({ purchases, groups, su
       ...formData,
       amount: parseCurrency(formData.amount),
       date: dateToISO(formData.date),
-      dueDate: formData.dueDate ? dateToISO(formData.dueDate) : undefined,
       type: TransactionType.PURCHASE
     });
 
     setFormData({
       date: isoToDisplayDate(new Date().toISOString().split('T')[0]),
-      dueDate: '',
       amount: '',
       groupId: '',
       supplierId: '',
@@ -54,7 +50,7 @@ const PurchaseManager: React.FC<PurchaseManagerProps> = ({ purchases, groups, su
         <h3 className="text-sm font-black text-indigo-900 mb-6 flex items-center gap-2">
           <Plus size={18} /> Nova Compra
         </h3>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 items-end gap-4">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 items-end gap-4">
           <div className="w-full">
             <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Data Emissão</label>
             <input 
@@ -64,17 +60,6 @@ const PurchaseManager: React.FC<PurchaseManagerProps> = ({ purchases, groups, su
               className="w-full p-4 rounded-2xl bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
               value={formData.date}
               onChange={e => setFormData({...formData, date: maskDate(e.target.value)})}
-              maxLength={10}
-            />
-          </div>
-          <div className="w-full">
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 text-rose-500">Vencimento</label>
-            <input 
-              type="text" 
-              placeholder="DD/MM/AAAA"
-              className="w-full p-4 rounded-2xl bg-white border border-rose-100 outline-none focus:ring-2 focus:ring-rose-500 font-bold text-rose-600"
-              value={formData.dueDate}
-              onChange={e => setFormData({...formData, dueDate: maskDate(e.target.value)})}
               maxLength={10}
             />
           </div>
@@ -138,7 +123,6 @@ const PurchaseManager: React.FC<PurchaseManagerProps> = ({ purchases, groups, su
             <thead>
               <tr className="text-left text-[10px] uppercase font-black text-slate-400 bg-slate-50/30">
                 <th className="px-8 py-4">Emissão</th>
-                <th className="px-8 py-4 text-rose-500">Vencimento</th>
                 <th className="px-8 py-4">NF</th>
                 <th className="px-8 py-4">Fornecedor</th>
                 <th className="px-8 py-4">Grupo</th>
@@ -149,15 +133,7 @@ const PurchaseManager: React.FC<PurchaseManagerProps> = ({ purchases, groups, su
             <tbody className="divide-y divide-slate-50">
               {purchases.map(p => (
                 <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-8 py-4 text-sm font-bold text-slate-600">{isoToDisplayDate(p.date)}</td>
-                  <td className="px-8 py-4 text-sm font-bold text-rose-600">
-                    {p.dueDate ? (
-                      <div className="flex items-center gap-1">
-                        <CalendarDays size={14} className="opacity-50" />
-                        {isoToDisplayDate(p.dueDate)}
-                      </div>
-                    ) : '-'}
-                  </td>
+                  <td className="px-8 py-4 text-sm font-bold text-slate-600">{new Date(p.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                   <td className="px-8 py-4 text-sm font-medium text-slate-500">{p.invoiceNumber || '-'}</td>
                   <td className="px-8 py-4 text-sm font-medium">{suppliers.find(s => s.id === p.supplierId)?.name || '-'}</td>
                   <td className="px-8 py-4 text-xs font-black text-indigo-400 uppercase">{groups.find(g => g.id === p.groupId)?.name}</td>
@@ -169,7 +145,7 @@ const PurchaseManager: React.FC<PurchaseManagerProps> = ({ purchases, groups, su
               ))}
               {purchases.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-8 py-10 text-center text-slate-400 font-bold">Nenhuma compra registrada.</td>
+                  <td colSpan={6} className="px-8 py-10 text-center text-slate-400 font-bold">Nenhuma compra registrada.</td>
                 </tr>
               )}
             </tbody>

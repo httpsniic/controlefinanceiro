@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DailyRevenue } from '../types';
 import { Plus, Trash2, Calendar as CalendarIcon, TrendingUp } from 'lucide-react';
@@ -117,7 +116,7 @@ const BillingManager: React.FC<BillingManagerProps> = ({ revenues, onAdd, onDele
                       <tr key={rev.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-8 py-5 text-sm font-medium flex items-center gap-2">
                           <CalendarIcon size={16} className="text-slate-300" />
-                          {isoToDisplayDate(rev.date)}
+                          {new Date(rev.date + 'T00:00:00').toLocaleDateString('pt-BR')}
                         </td>
                         <td className="px-8 py-5 text-sm text-right text-slate-600">{formatCurrency(rev.salon)}</td>
                         <td className="px-8 py-5 text-sm text-right text-slate-600">{formatCurrency(rev.delivery)}</td>
