@@ -3,7 +3,7 @@ import {
   AppState, Store, Transaction, ProductGroup, Supplier, User,
   DailyRevenue, TransactionType, StoreGoal
 } from './types';
-import { auth, stores as storesApi, transactions as transactionsApi, suppliers as suppliersApi, productGroups as productGroupsApi, dailyRevenues as dailyRevenuesApi, goals as goalsApi } from './services/api';
+import { auth, stores as storesApi, transactions as transactionsApi, suppliers as suppliersApi, productGroups as productGroupsApi, dailyRevenues as dailyRevenuesApi, goals as goalsApi, userStoreAccess as userStoreAccessApi } from './services/api';
 import StoreSelector from './components/StoreSelector';
 import TransactionForm from './components/TransactionForm';
 import ProductGroupManager from './components/ProductGroupManager';
@@ -116,6 +116,14 @@ const App: React.FC = () => {
 
       const users = await response.json();
       setAllUsers(users);
+
+      // Carregar permissões de acesso
+      try {
+        const accessMap = await userStoreAccessApi.list();
+        setState(prev => ({ ...prev, userStoreAccess: accessMap }));
+      } catch (error) {
+        console.error('Erro ao carregar permissões:', error);
+      }
     } catch (error: any) {
       console.error('Erro ao carregar usuários:', error);
     }
@@ -621,7 +629,7 @@ const App: React.FC = () => {
             {activeView === 'goals' && <GoalManager goals={activeGoals} onAdd={handleAddGoal} onDelete={handleDeleteGoal} />}
             {activeView === 'groups' && <ProductGroupManager groups={activeGroups} onAdd={handleAddProductGroup} onDelete={handleDeleteProductGroup} />}
             {activeView === 'suppliers' && <SupplierManager suppliers={activeSuppliers} onAdd={handleAddSupplier} onDelete={handleDeleteSupplier} />}
-            {activeView === 'users-admin' && <UserManager users={allUsers} stores={state.stores} accessMap={state.userStoreAccess} onToggleAccess={(u, s) => { const curr = state.userStoreAccess[u] || []; const next = curr.includes(s) ? curr.filter(id => id !== s) : [...curr, s]; setState(p => ({...p, userStoreAccess: {...p.userStoreAccess, [u]: next}})); }} />}
+            {activeView === 'users-admin' && <UserManager users={allUsers} stores={state.stores} accessMap={state.userStoreAccess} onToggleAccess={async (u, s) => { try { await userStoreAccessApi.toggle(u, s); const curr = state.userStoreAccess[u] || []; const next = curr.includes(s) ? curr.filter(id => id !== s) : [...curr, s]; setState(p => ({...p, userStoreAccess: {...p.userStoreAccess, [u]: next}})); } catch (error) { console.error('Erro ao alterar acesso:', error); alert('Erro ao alterar permissão'); } }} />}
           </div>
           
           {activeView === 'purchases-form' && <TransactionForm groups={activeGroups} suppliers={activeSuppliers} onAdd={data => { handleAddTransaction(data); setActiveView('purchases'); }} onClose={() => setActiveView('purchases')} initialType={TransactionType.PURCHASE} />}

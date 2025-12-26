@@ -266,3 +266,25 @@ export const goals = {
     return handleResponse(response);
   }
 };
+
+// ============================================
+// PERMISSÕES DE ACESSO
+// ============================================
+
+export const userStoreAccess = {
+  list: async () => {
+    const response = await fetch(`${API_URL}/api/user-store-access`, {
+      headers: getHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  toggle: async (userId: string, storeId: string) => {
+    const response = await fetch(`${API_URL}/api/user-store-access/toggle`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ userId, storeId })
+    });
+    return handleResponse(response);
+  }
+};
