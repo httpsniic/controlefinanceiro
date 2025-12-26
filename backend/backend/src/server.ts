@@ -10,7 +10,7 @@ import productGroupRoutes from './routes/productGroups';
 import dailyRevenueRoutes from './routes/dailyRevenues';
 import goalRoutes from './routes/goals';
 import userRoutes from './routes/users';
-import userStoreAccessRoutes from './routes/userStoreAccess';
+import userStoreAccessRoutes from './routes/userStoreAccessRoutes';
 
 dotenv.config();
 
