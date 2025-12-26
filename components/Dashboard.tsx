@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   BarChart, 
@@ -35,6 +34,22 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, revenues, goals }) 
 
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = dateStr.includes('T') 
+        ? new Date(dateStr) 
+        : new Date(dateStr + 'T00:00:00');
+      
+      if (isNaN(date.getTime())) {
+        return dateStr;
+      }
+      
+      return date.toLocaleDateString('pt-BR');
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -117,6 +132,8 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, revenues, goals }) 
                 <Tooltip 
                   cursor={{fill: '#f8fafc'}}
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                  labelFormatter={(value) => formatDate(value)}
+                  formatter={(value: any) => [new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value), '']}
                 />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
                 <Bar dataKey="total" name="Faturamento" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
