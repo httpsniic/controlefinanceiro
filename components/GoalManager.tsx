@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { StoreGoal } from '../types';
 import { Target, Plus, Trash2, Calendar, TrendingUp, Percent, Ticket } from 'lucide-react';
@@ -86,7 +85,7 @@ const GoalManager: React.FC<GoalManagerProps> = ({ goals, onAdd, onDelete }) => 
                     <TrendingUp size={16} className="text-emerald-500" />
                     <span className="text-[10px] font-black text-slate-400 uppercase">Faturamento Alvo</span>
                   </div>
-                  <span className="font-black text-slate-800">{new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL'}).format(goal.revenueTarget)}</span>
+                  <span className="font-black text-slate-800">{new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL'}).format(goal.target || 0)}</span>
                </div>
                <div className="grid grid-cols-2 gap-4">
                  <div className="p-4 bg-slate-50 rounded-2xl">
@@ -94,14 +93,14 @@ const GoalManager: React.FC<GoalManagerProps> = ({ goals, onAdd, onDelete }) => 
                       <Percent size={14} className="text-amber-500" />
                       <span className="text-[9px] font-black text-slate-400 uppercase">CMC Meta</span>
                     </div>
-                    <span className="font-black text-slate-800">{goal.cmcTarget}%</span>
+                    <span className="font-black text-slate-800">{goal.cmcTarget || 0}%</span>
                  </div>
                  <div className="p-4 bg-slate-50 rounded-2xl">
                     <div className="flex items-center gap-2 mb-1">
                       <Ticket size={14} className="text-indigo-500" />
                       <span className="text-[9px] font-black text-slate-400 uppercase">Ticket Médio</span>
                     </div>
-                    <span className="font-black text-slate-800">{new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL'}).format(goal.avgTicket)}</span>
+                    <span className="font-black text-slate-800">{new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL'}).format(goal.avgTicket || 0)}</span>
                  </div>
                </div>
             </div>
