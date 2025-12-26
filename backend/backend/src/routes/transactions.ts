@@ -37,7 +37,24 @@ router.get('/store/:storeId', async (req: Request, res: Response) => {
       [storeId]
     );
 
-    res.json(result.rows);
+    // Converter snake_case para camelCase
+    const transactions = result.rows.map(row => ({
+      id: row.id,
+      storeId: row.store_id,
+      type: row.type,
+      description: row.description,
+      amount: row.amount,
+      date: row.date,
+      dueDate: row.due_date,
+      groupId: row.group_id,
+      supplierId: row.supplier_id,
+      invoiceNumber: row.invoice_number,
+      createdAt: row.created_at,
+      groupName: row.group_name,
+      supplierName: row.supplier_name
+    }));
+
+    res.json(transactions);
   } catch (error) {
     console.error('Erro ao listar transações:', error);
     res.status(500).json({ error: 'Erro ao listar transações' });
@@ -80,7 +97,23 @@ router.post('/', async (req: Request, res: Response) => {
       [storeId, type, description, amount, date, dueDate || null, groupId || null, supplierId || null, invoiceNumber || null]
     );
 
-    res.status(201).json(result.rows[0]);
+    // Converter snake_case para camelCase
+    const transaction = result.rows[0];
+    const formattedTransaction = {
+      id: transaction.id,
+      storeId: transaction.store_id,
+      type: transaction.type,
+      description: transaction.description,
+      amount: transaction.amount,
+      date: transaction.date,
+      dueDate: transaction.due_date,
+      groupId: transaction.group_id,
+      supplierId: transaction.supplier_id,
+      invoiceNumber: transaction.invoice_number,
+      createdAt: transaction.created_at
+    };
+
+    res.status(201).json(formattedTransaction);
   } catch (error) {
     console.error('Erro ao criar transação:', error);
     res.status(500).json({ error: 'Erro ao criar transação' });
@@ -125,7 +158,23 @@ router.put('/:id', async (req: Request, res: Response) => {
       [type, description, amount, date, dueDate || null, groupId || null, supplierId || null, invoiceNumber || null, id]
     );
 
-    res.json(result.rows[0]);
+    // Converter snake_case para camelCase
+    const transaction = result.rows[0];
+    const formattedTransaction = {
+      id: transaction.id,
+      storeId: transaction.store_id,
+      type: transaction.type,
+      description: transaction.description,
+      amount: transaction.amount,
+      date: transaction.date,
+      dueDate: transaction.due_date,
+      groupId: transaction.group_id,
+      supplierId: transaction.supplier_id,
+      invoiceNumber: transaction.invoice_number,
+      createdAt: transaction.created_at
+    };
+
+    res.json(formattedTransaction);
   } catch (error) {
     console.error('Erro ao atualizar transação:', error);
     res.status(500).json({ error: 'Erro ao atualizar transação' });
