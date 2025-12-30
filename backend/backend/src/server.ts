@@ -11,6 +11,8 @@ import dailyRevenueRoutes from './routes/dailyRevenues';
 import goalRoutes from './routes/goals';
 import userRoutes from './routes/users';
 import userStoreAccessRoutes from './routes/userStoreAccessRoutes';
+import portionedProductsRoutes from './routes/portionedProducts';
+import portionedEntriesRoutes from './routes/portionedEntries';
 
 dotenv.config();
 
@@ -42,6 +44,8 @@ app.use('/api/daily-revenues', dailyRevenueRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/user-store-access', userStoreAccessRoutes);
+app.use('/api/portioned-products', portionedProductsRoutes);
+app.use('/api/portioned-entries', portionedEntriesRoutes);
 
 // =========================
 // Health / Root
@@ -59,7 +63,9 @@ app.get('/', (req: Request, res: Response) => {
       dailyRevenues: '/api/daily-revenues',
       goals: '/api/goals',
       users: '/api/users',
-      userStoreAccess: '/api/user-store-access'
+      userStoreAccess: '/api/user-store-access',
+      portionedProducts: '/api/portioned-products',
+      portionedEntries: '/api/portioned-entries'
     }
   });
 });
