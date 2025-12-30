@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   AppState, Store, Transaction, ProductGroup, Supplier, User,
-  DailyRevenue, TransactionType, StoreGoal
+  DailyRevenue, TransactionType, StoreGoal, PortionedProduct, PortionedEntry
 } from './types';
-import { auth, stores as storesApi, transactions as transactionsApi, suppliers as suppliersApi, productGroups as productGroupsApi, dailyRevenues as dailyRevenuesApi, goals as goalsApi, userStoreAccess as userStoreAccessApi } from './services/api';
+import { auth, stores as storesApi, transactions as transactionsApi, suppliers as suppliersApi, productGroups as productGroupsApi, dailyRevenues as dailyRevenuesApi, goals as goalsApi, userStoreAccess as userStoreAccessApi, portionedProducts as portionedProductsApi, portionedEntries as portionedEntriesApi } from './services/api';
 import StoreSelector from './components/StoreSelector';
 import TransactionForm from './components/TransactionForm';
 import ProductGroupManager from './components/ProductGroupManager';
@@ -13,6 +13,7 @@ import PurchaseManager from './components/PurchaseManager';
 import Dashboard from './components/Dashboard';
 import GoalManager from './components/GoalManager';
 import UserManager from './components/UserManager';
+import PortionedManager from './components/PortionedManager';
 import { 
   User as UserIcon, LogOut, ChevronLeft, ChevronRight, 
   LayoutDashboard, ShoppingCart, Target, Truck, 
@@ -36,7 +37,9 @@ const App: React.FC = () => {
     transactions: {},
     dailyRevenues: {},
     goals: {},
-    userStoreAccess: {}
+    userStoreAccess: {},
+    portionedProducts: {},
+    portionedEntries: {}
   });
   
   const [activeView, setActiveView] = useState<string>('dashboard');
@@ -164,12 +167,14 @@ const App: React.FC = () => {
   const loadStoreData = async (storeId: string) => {
     try {
       setIsLoading(true);
-      const [transactionsList, suppliersList, groupsList, revenuesList, goalsList] = await Promise.all([
+      const [transactionsList, suppliersList, groupsList, revenuesList, goalsList, portionedProductsList, portionedEntriesList] = await Promise.all([
         transactionsApi.list(storeId),
         suppliersApi.list(storeId),
         productGroupsApi.list(storeId),
         dailyRevenuesApi.list(storeId),
-        goalsApi.list(storeId)
+        goalsApi.list(storeId),
+        portionedProductsApi.list(storeId),
+        portionedEntriesApi.list(storeId)
       ]);
 
       setState(prev => ({
@@ -178,7 +183,9 @@ const App: React.FC = () => {
         suppliers: { ...prev.suppliers, [storeId]: suppliersList },
         productGroups: { ...prev.productGroups, [storeId]: groupsList },
         dailyRevenues: { ...prev.dailyRevenues, [storeId]: revenuesList },
-        goals: { ...prev.goals, [storeId]: goalsList }
+        goals: { ...prev.goals, [storeId]: goalsList },
+        portionedProducts: { ...prev.portionedProducts, [storeId]: portionedProductsList },
+        portionedEntries: { ...prev.portionedEntries, [storeId]: portionedEntriesList }
       }));
     } catch (error: any) {
       console.error('Erro ao carregar dados da loja:', error);
@@ -200,6 +207,8 @@ const App: React.FC = () => {
   const activeGoals = useMemo(() => state.activeStoreId ? (state.goals[state.activeStoreId] || []) : [], [state.goals, state.activeStoreId]);
   const activeGroups = useMemo(() => state.activeStoreId ? (state.productGroups[state.activeStoreId] || []) : [], [state.productGroups, state.activeStoreId]);
   const activeSuppliers = useMemo(() => state.activeStoreId ? (state.suppliers[state.activeStoreId] || []) : [], [state.suppliers, state.activeStoreId]);
+  const activePortionedProducts = useMemo(() => state.activeStoreId ? (state.portionedProducts[state.activeStoreId] || []) : [], [state.portionedProducts, state.activeStoreId]);
+  const activePortionedEntries = useMemo(() => state.activeStoreId ? (state.portionedEntries[state.activeStoreId] || []) : [], [state.portionedEntries, state.activeStoreId]);
 
   const monthData = useMemo(() => {
     const revs = activeRevenues.filter(r => r.date.startsWith(currentMonth));
@@ -416,6 +425,85 @@ const App: React.FC = () => {
     } catch (error: any) {
       console.error('Erro ao deletar meta:', error);
       alert('Erro ao deletar meta: ' + error.message);
+    }
+  };
+
+  // Funções de gerenciamento de porcionados
+  const handleAddPortionedProduct = async (data: any) => {
+    if (!activeStore) return;
+    
+    try {
+      const newProduct = await portionedProductsApi.create({
+        ...data,
+        storeId: activeStore.id
+      });
+      setState(prev => ({
+        ...prev,
+        portionedProducts: {
+          ...prev.portionedProducts,
+          [activeStore.id]: [...(prev.portionedProducts[activeStore.id] || []), newProduct]
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao adicionar produto porcionado:', error);
+      alert('Erro ao adicionar produto: ' + error.message);
+    }
+  };
+
+  const handleDeletePortionedProduct = async (id: string) => {
+    if (!activeStore) return;
+    
+    try {
+      await portionedProductsApi.delete(id);
+      setState(prev => ({
+        ...prev,
+        portionedProducts: {
+          ...prev.portionedProducts,
+          [activeStore.id]: prev.portionedProducts[activeStore.id].filter(p => p.id !== id)
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao deletar produto porcionado:', error);
+      alert('Erro ao deletar produto: ' + error.message);
+    }
+  };
+
+  const handleAddPortionedEntry = async (data: any) => {
+    if (!activeStore) return;
+    
+    try {
+      const newEntry = await portionedEntriesApi.create({
+        ...data,
+        storeId: activeStore.id
+      });
+      setState(prev => ({
+        ...prev,
+        portionedEntries: {
+          ...prev.portionedEntries,
+          [activeStore.id]: [...(prev.portionedEntries[activeStore.id] || []), newEntry]
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao adicionar lançamento:', error);
+      alert('Erro ao adicionar lançamento: ' + error.message);
+    }
+  };
+
+  const handleDeletePortionedEntry = async (id: string) => {
+    if (!activeStore) return;
+    
+    try {
+      await portionedEntriesApi.delete(id);
+      setState(prev => ({
+        ...prev,
+        portionedEntries: {
+          ...prev.portionedEntries,
+          [activeStore.id]: prev.portionedEntries[activeStore.id].filter(e => e.id !== id)
+        }
+      }));
+    } catch (error: any) {
+      console.error('Erro ao deletar lançamento:', error);
+      alert('Erro ao deletar lançamento: ' + error.message);
     }
   };
 
@@ -639,6 +727,7 @@ const App: React.FC = () => {
               { id: 'goals', label: 'Metas', icon: Target },
               { id: 'suppliers', label: 'Fornecedores', icon: Truck },
               { id: 'groups', label: 'Grupos', icon: Package },
+              { id: 'portioned', label: 'Porcionados', icon: Package },
               ...(state.currentUser.role === 'master' ? [{ id: 'users-admin', label: 'Acessos', icon: Settings }] : [])
             ].map(tab => (
               <button
@@ -660,6 +749,7 @@ const App: React.FC = () => {
             {activeView === 'purchases' && <PurchaseManager purchases={activeTransactions.filter(t => t.type === TransactionType.PURCHASE)} groups={activeGroups} suppliers={activeSuppliers} onAdd={handleAddTransaction} onDelete={handleDeleteTransaction} />}
             {activeView === 'goals' && <GoalManager goals={activeGoals} onAdd={handleAddGoal} onDelete={handleDeleteGoal} />}
             {activeView === 'groups' && <ProductGroupManager groups={activeGroups} onAdd={handleAddProductGroup} onDelete={handleDeleteProductGroup} />}
+            {activeView === 'portioned' && <PortionedManager products={activePortionedProducts} entries={activePortionedEntries} suppliers={activeSuppliers} onAddProduct={handleAddPortionedProduct} onDeleteProduct={handleDeletePortionedProduct} onAddEntry={handleAddPortionedEntry} onDeleteEntry={handleDeletePortionedEntry} />}
             {activeView === 'suppliers' && <SupplierManager suppliers={activeSuppliers} onAdd={handleAddSupplier} onDelete={handleDeleteSupplier} />}
             {activeView === 'users-admin' && <UserManager users={allUsers} stores={state.stores} accessMap={state.userStoreAccess} onToggleAccess={async (u, s) => { try { await userStoreAccessApi.toggle(u, s); const curr = state.userStoreAccess[u] || []; const next = curr.includes(s) ? curr.filter(id => id !== s) : [...curr, s]; setState(p => ({...p, userStoreAccess: {...p.userStoreAccess, [u]: next}})); } catch (error) { console.error('Erro ao alterar acesso:', error); alert('Erro ao alterar permissão'); } }} />}
           </div>

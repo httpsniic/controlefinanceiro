@@ -82,3 +82,29 @@ export interface AppState {
   goals: Record<string, StoreGoal[]>;
   userStoreAccess: Record<string, string[]>;
 }
+
+export interface PortionedProduct {
+  id: string;
+  storeId: string;
+  rawProtein: string;
+  portionedProduct: string;
+  standardWeight: number;
+  targetYield: number;
+  tolerance: number;
+  supplierId?: string;
+  supplierName?: string;
+  operatorName?: string;
+  createdAt: string;
+}
+
+export interface PortionedEntry {
+  id: string;
+  storeId: string;
+  portionedProductId: string;
+  proteinName: string;
+  supplierId?: string;
+  supplierName?: string;
+  price: number;
+  entryDate: string;
+  createdAt: string;
+}

@@ -288,3 +288,59 @@ export const userStoreAccess = {
     return handleResponse(response);
   }
 };
+
+// ============================================
+// PRODUTOS PORCIONADOS
+// ============================================
+
+export const portionedProducts = {
+  list: async (storeId: string) => {
+    const response = await fetch(`${API_URL}/api/portioned-products/store/${storeId}`, {
+      headers: getHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  create: async (data: any) => {
+    const response = await fetch(`${API_URL}/api/portioned-products`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    return handleResponse(response);
+  },
+
+  delete: async (id: string) => {
+    const response = await fetch(`${API_URL}/api/portioned-products/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    return handleResponse(response);
+  }
+};
+
+export const portionedEntries = {
+  list: async (storeId: string) => {
+    const response = await fetch(`${API_URL}/api/portioned-entries/store/${storeId}`, {
+      headers: getHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  create: async (data: any) => {
+    const response = await fetch(`${API_URL}/api/portioned-entries`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    return handleResponse(response);
+  },
+
+  delete: async (id: string) => {
+    const response = await fetch(`${API_URL}/api/portioned-entries/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    return handleResponse(response);
+  }
+};
